@@ -1706,6 +1706,7 @@ void App::SetCSSVariable(const std::string& component_id,
     return;
   }
   tasm::PipelineOptions pipeline_options;
+  pipeline_options.pipeline_origin = tasm::timing::kUpdateTriggeredByBts;
   delegate_->OnPipelineStart(pipeline_options.pipeline_id,
                              pipeline_options.pipeline_origin,
                              pipeline_options.pipeline_start_timestamp);
@@ -2497,6 +2498,7 @@ void App::setJsAppObj(piper::Object&& obj) {
 void App::appDataChange(lepus_value&& data, ApiCallBack callback,
                         runtime::UpdateDataType update_data_type) {
   tasm::PipelineOptions pipeline_options;
+  pipeline_options.pipeline_origin = tasm::timing::kUpdateTriggeredByBts;
   delegate_->OnPipelineStart(pipeline_options.pipeline_id,
                              pipeline_options.pipeline_origin,
                              pipeline_options.pipeline_start_timestamp);
@@ -2630,6 +2632,7 @@ std::optional<JSINativeException> App::batchedUpdateData(
           runtime::UpdateDataType(js_update_data_type_opt->getNumber());
     }
     tasm::PipelineOptions pipeline_options;
+    pipeline_options.pipeline_origin = tasm::timing::kUpdateTriggeredByBts;
     delegate_->OnPipelineStart(pipeline_options.pipeline_id,
                                pipeline_options.pipeline_origin,
                                pipeline_options.pipeline_start_timestamp);
@@ -2947,7 +2950,7 @@ std::optional<Value> App::PublishComponentEvent(const std::string& component_id,
   if (rt && IsJsAppStateValid() && card_bundle_.support_component_js) {
     int32_t instance_id = static_cast<int32_t>(rt->getRuntimeId());
     tasm::timing::LongTaskMonitor::Scope long_task_scope(
-        instance_id, tasm::timing::kUpdateDataByJSTask,
+        instance_id, tasm::timing::kUpdateTriggeredByBts,
         tasm::timing::kTaskNameJSAppPublishComponentEvent, handler);
     Scope scope(*rt);
     Object js_app = js_app_.getObject(*rt);
@@ -3007,6 +3010,7 @@ void App::updateComponentData(const std::string& component_id,
   TRACE_EVENT(LYNX_TRACE_CATEGORY, "LynxJSUpdateComponentData");
   LOGI(" updateComponentData " << component_id << " " << this);
   tasm::PipelineOptions pipeline_options;
+  pipeline_options.pipeline_origin = tasm::timing::kUpdateTriggeredByBts;
   delegate_->OnPipelineStart(pipeline_options.pipeline_id,
                              pipeline_options.pipeline_origin,
                              pipeline_options.pipeline_start_timestamp);
@@ -3069,6 +3073,7 @@ void App::SetNativeProps(tasm::NodeSelectRoot root,
                          tasm::NodeSelectOptions options,
                          lepus::Value native_props) {
   tasm::PipelineOptions pipeline_options;
+  pipeline_options.pipeline_origin = tasm::timing::kSetNativeProps;
   delegate_->OnPipelineStart(pipeline_options.pipeline_id,
                              pipeline_options.pipeline_origin,
                              pipeline_options.pipeline_start_timestamp);
@@ -3190,6 +3195,7 @@ void App::ReloadFromJS(const lepus::Value& value, ApiCallBack callback) {
   if (rt) {
     runtime::UpdateDataType update_data_type;
     tasm::PipelineOptions pipeline_options;
+    pipeline_options.pipeline_origin = tasm::timing::kReloadBundleFromBts;
     delegate_->OnPipelineStart(pipeline_options.pipeline_id,
                                pipeline_options.pipeline_origin,
                                pipeline_options.pipeline_start_timestamp);
@@ -3200,8 +3206,9 @@ void App::ReloadFromJS(const lepus::Value& value, ApiCallBack callback) {
                                               timing_flag);
       tasm::TimingCollector::Scope<runtime::TemplateDelegate> scope(
           delegate_, pipeline_options);
+      // TODO(zhangkaijie.9): is this flag useful?
       tasm::TimingCollector::Instance()->Mark(
-          tasm::timing::kReloadFromBackground);
+          tasm::timing::kReloadBundleFromBts);
     }
     runtime::UpdateDataTask task(true, PAGE_GROUP_ID, std::move(value),
                                  callback, update_data_type,
